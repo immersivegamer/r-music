@@ -1,0 +1,7 @@
+/packages
+/r-music/r-music.csproj.user
+/r-music/obj
+/r-music/bin
+/.vs/r-music/v15/.suo
+/.vs/r-music/v15/Server/sqlite3/db.lock
+/.vs/r-music/v15/Server/sqlite3/storage.ide
