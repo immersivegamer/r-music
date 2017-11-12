@@ -19,6 +19,12 @@ namespace r_listentothis
             New
         }
 
+        [Option('u', "user", Required = true, HelpText = "Reddit account user name.")]
+        public string username { get; set; }
+
+        [Option('p', "password", HelpText = "Reddit account password. This is unsafe. If left blank will prompt for password.")]
+        public string password { get; set; }
+
         [Option('r',"subreddit",DefaultValue = "/r/listentothis", HelpText ="Subreddit to download songs from. Currently only youtube songs are downloaded.")]
         public string subreddit { get; set; }
 
@@ -29,19 +35,13 @@ namespace r_listentothis
         public int count { get; set; }
 
         [Option('f',"folder",DefaultValue = @".\music", HelpText ="Folder to save files. Default is relative to current directory.")]
-        public string folder { get; set; }
-
-        [Option('u',"user",Required = true, HelpText ="Reddit account user name.")]
-        public string username { get; set; }
-
-        [Option('p',"password", HelpText ="Reddit account password. This is unsafe. If left blank will prompt for password.")]
-        public string password { get; set; }
-
-        [Option('t',"timespan",DefaultValue = FromTime.Day, HelpText ="Option for the Top sort: Hour, Day, Week, Month,Year or All")]
-        public FromTime timespan { get; set; }
+        public string folder { get; set; }                
 
         [Option('s',"sort",DefaultValue = ListingType.All, HelpText ="The sorting to use: Top, Hot, New, or All.")]
         public ListingType sort { get; set; }
+
+        [Option('t', "timespan", DefaultValue = FromTime.Day, HelpText = "Option for the Top sort: Hour, Day, Week, Month,Year or All")]
+        public FromTime timespan { get; set; }
 
         [Option('v',"video",DefaultValue =false, HelpText ="Only download video file, don't convert to audio file. This option saves the video by default.")]
         public bool video { get; set; }
