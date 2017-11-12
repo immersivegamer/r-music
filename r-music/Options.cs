@@ -34,7 +34,7 @@ namespace r_listentothis
         [Option('u',"user",Required = true, HelpText ="Reddit account user name.")]
         public string username { get; set; }
 
-        [Option('p',"password",Required = true, HelpText ="Reddit account password. This is unsafe. If left blank will prompt for password.")]
+        [Option('p',"password", HelpText ="Reddit account password. This is unsafe. If left blank will prompt for password.")]
         public string password { get; set; }
 
         [Option('t',"timespan",DefaultValue = FromTime.Day, HelpText ="Option for the Top sort: Hour, Day, Week, Month,Year or All")]

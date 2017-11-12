@@ -21,6 +21,12 @@ namespace r_listentothis
                 return;
             }
 
+            if(string.IsNullOrEmpty(options.password))
+            {
+                Console.WriteLine("Password:");
+                options.password = ReadPassword();
+            }
+
             //get top, hot and new from previous monday (1 week, building up through the week)
             //currently top by day and each listing limited by 50
             var swAll = Start();
@@ -210,6 +216,35 @@ namespace r_listentothis
         {
             var invalids = System.IO.Path.GetInvalidFileNameChars();
             return String.Join("_", name.Split(invalids, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+        }
+
+        public static string ReadPassword()
+        {
+            var passbits = new Stack<string>();
+            //keep reading
+            for (ConsoleKeyInfo cki = Console.ReadKey(true); cki.Key != ConsoleKey.Enter; cki = Console.ReadKey(true))
+            {
+                if (cki.Key == ConsoleKey.Backspace)
+                {
+                    if (passbits.Count() > 0)
+                    {
+                        //rollback the cursor and write a space so it looks backspaced to the user
+                        Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                        Console.Write(" ");
+                        Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                        passbits.Pop();
+                    }
+                }
+                else
+                {
+                    Console.Write("*");
+                    passbits.Push(cki.KeyChar.ToString());
+                }
+            }
+            string[] pass = passbits.ToArray();
+            Array.Reverse(pass);
+            Console.Write(Environment.NewLine);
+            return string.Join(string.Empty, pass);
         }
     }
 }
