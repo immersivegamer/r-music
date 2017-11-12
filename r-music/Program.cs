@@ -51,12 +51,14 @@ namespace r_listentothis
                     Console.WriteLine(post.Title);
                     Console.Write("---> ");
 
-                    var saveFilePath = GenerateSavePath(post.Title, options.folder, "mp4");
+                    Console.Write("Info ");
+                    var video = GetBestAudioVideo(post.Url.ToString());
+                    var saveFilePath = GenerateSavePath(post.Title, options.folder, video.VideoExtension);
                     if (!File.Exists(saveFilePath))
                     {
                         //Download YouTube (working), could we download multiple videos at a time?
                         Console.Write("Downloading ");
-                        DownloadYTA(post.Url.ToString(), saveFilePath);
+                        DownloadVideo(video, saveFilePath);
                     }
                     else
                         Console.Write("(Already Downloaded) ");
@@ -161,18 +163,21 @@ namespace r_listentothis
             }
         }
 
-        private static void DownloadYTA(string url, string path)
-        {
-            IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url);
-            VideoInfo video = videoInfos
-                .First(info => info.VideoType == VideoType.Mp4 && info.Resolution == 360);
-
-            if (video.RequiresDecryption)
-            {
-                DownloadUrlResolver.DecryptDownloadUrl(video);
-            }
+        private static void DownloadVideo(VideoInfo video, string path)
+        {            
             var videoDownloader = new VideoDownloader(video, path);
             videoDownloader.Execute();
+        }
+
+        private static VideoInfo GetBestAudioVideo(string url)
+        {
+            IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url);
+
+            VideoInfo video = videoInfos
+                .OrderByDescending(info => info.AudioBitrate)
+                .First();
+
+            return video;
         }
 
         static System.Diagnostics.Stopwatch Start()
