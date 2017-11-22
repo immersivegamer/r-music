@@ -9,6 +9,7 @@ What things you need to install?
 
 ```
 Download .NET Framework 4.6.1 - https://www.microsoft.com/net/download/visual-studio-sdks
+Download .NET Framework 3.5 (for YoutubeExtractor)- https://www.microsoft.com/net/download/visual-studio-sdks
 ```
 If did not do a recursive clone, run:
 ```
