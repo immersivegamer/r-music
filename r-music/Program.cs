@@ -29,25 +29,38 @@ namespace r_listentothis
 
             //get top, hot and new from previous monday (1 week, building up through the week)
             //currently top by day and each listing limited by 50
-            var swAll = Start();
+            var stopwatchAll = Start();
             ValidateFolder(options);
 
             //generate paths and link pairs
-            var swGetPosts = Start();
+            var stopwatchGetPosts = Start();
             Console.WriteLine("Getting Reddit Posts:");
             var posts = GetRedditPosts(options).ToList();
-            Console.WriteLine($"{posts.Count()} in time: {Stop(swGetPosts)}");
+            Console.WriteLine($"{posts.Count()} in time: {Stop(stopwatchGetPosts)}");
+            RemoveDuplicatePosts(posts, options);
+            Console.WriteLine();
+            Console.WriteLine($"Downloading {posts.Count} posts:");
+            DownloadPosts(posts, options);
+            Console.WriteLine($"Processed all current videos, time: {Stop(stopwatchAll)}");
+            Console.WriteLine("press any key to finish");
+            Console.ReadKey();
+        }
+
+        private static void RemoveDuplicatePosts(List<Post> posts, Options options)
+        {
             //see if path exists (discard if so)
             var removeCount = posts.RemoveAll(x => File.Exists(GenerateSavePath(x.Title, options.folder, "mp3")));
             if (removeCount > 0)
                 Console.WriteLine($"{removeCount} already downloaded");
-            Console.WriteLine();
-            Console.WriteLine($"Downloading {posts.Count} posts:");
+        }
+
+        private static void DownloadPosts(List<Post> posts, Options options)
+        {
             foreach (var post in posts)
             {
                 try
                 {
-                    var swProcess = Start();
+                    var stopwatchProcess = Start();
                     Console.WriteLine(post.Title);
                     Console.Write("---> ");
 
@@ -72,11 +85,11 @@ namespace r_listentothis
 
                     if (!options.video && !options.save)
                     {
-                        Console.Write("Deleteing ");
+                        Console.Write("Deleting ");
                         //Delete video
                         File.Delete(saveFilePath);
                     }
-                    Console.Write($"({Stop(swProcess)})");
+                    Console.Write($"({Stop(stopwatchProcess)})");
                     Console.WriteLine();
                 }
                 catch (Exception x)
@@ -85,9 +98,6 @@ namespace r_listentothis
                     Console.WriteLine($"WARNING: {x.Message}");
                 }
             }
-            Console.WriteLine($"Processed all current videos, time: {Stop(swAll)}");
-            Console.WriteLine("press any key to finish");
-            Console.ReadKey();
         }
 
         private static void ValidateFolder(Options options)
@@ -99,7 +109,7 @@ namespace r_listentothis
             }
         }
 
-        static string GenerateSavePath(string name, string folder, string extension)
+        public static string GenerateSavePath(string name, string folder, string extension)
         {
             var saveFilePath = Path.Combine(folder, CleanFileName(name));
             saveFilePath = Path.ChangeExtension(saveFilePath, extension);
@@ -201,29 +211,39 @@ namespace r_listentothis
         {
             var passbits = new Stack<string>();
             //keep reading
-            for (ConsoleKeyInfo cki = Console.ReadKey(true); cki.Key != ConsoleKey.Enter; cki = Console.ReadKey(true))
+            for (var cki = Console.ReadKey(true); cki.Key != ConsoleKey.Enter; cki = Console.ReadKey(true))
             {
                 if (cki.Key == ConsoleKey.Backspace)
                 {
-                    if (passbits.Count() > 0)
-                    {
-                        //rollback the cursor and write a space so it looks backspaced to the user
-                        Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
-                        Console.Write(" ");
-                        Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
-                        passbits.Pop();
-                    }
+                    HandleBackspace(passbits);
                 }
                 else
                 {
-                    Console.Write("*");
-                    passbits.Push(cki.KeyChar.ToString());
+                    HandleValidKeyPress(passbits, cki);
                 }
             }
             string[] pass = passbits.ToArray();
             Array.Reverse(pass);
             Console.Write(Environment.NewLine);
             return string.Join(string.Empty, pass);
+        }
+
+        private static void HandleValidKeyPress(Stack<string> passbits, ConsoleKeyInfo cki)
+        {
+            Console.Write("*");
+            passbits.Push(cki.KeyChar.ToString());
+        }
+
+        private static void HandleBackspace(Stack<string> passbits)
+        {
+            if (passbits.Any())
+            {
+                //rollback the cursor and write a space so it looks backspaced to the user
+                Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                Console.Write(" ");
+                Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                passbits.Pop();
+            }
         }
     }
 }
