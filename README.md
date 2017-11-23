@@ -29,4 +29,4 @@ nuget restore
 
 ## Running the tests
 
-Explain how to run the automated tests for this system
+Tests are written with Xunit. You can run these through your IDE.

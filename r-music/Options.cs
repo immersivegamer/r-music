@@ -9,7 +9,7 @@ using RedditSharp.Things;
 
 namespace r_listentothis
 {
-    class Options
+    public class Options
     {
         public enum ListingType
         {
