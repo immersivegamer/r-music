@@ -10,11 +10,12 @@ using YoutubeExtractor;
 
 namespace r_listentothis
 {
-    class Program
+    public class Program
     {
         static void Main(string[] args)
         {
             Options options = new Options();
+            Program program = new Program();
             if (!CommandLine.Parser.Default.ParseArguments(args, options))
             {
                 Console.ReadKey();
@@ -24,37 +25,56 @@ namespace r_listentothis
             if(string.IsNullOrEmpty(options.password))
             {
                 Console.WriteLine("Password:");
-                options.password = ReadPassword();
+                options.password = program.ReadPassword();
             }
 
             //get top, hot and new from previous monday (1 week, building up through the week)
             //currently top by day and each listing limited by 50
-            var swAll = Start();
-            ValidateFolder(options);
+            var stopwatchAll = program.Start();
+            program.ValidateFolder(options);
 
             //generate paths and link pairs
-            var swGetPosts = Start();
+            var stopwatchGetPosts = program.Start();
             Console.WriteLine("Getting Reddit Posts:");
-            var posts = GetRedditPosts(options).ToList();
-            Console.WriteLine($"{posts.Count()} in time: {Stop(swGetPosts)}");
-            //see if path exists (discard if so)
-            var removeCount = posts.RemoveAll(x => File.Exists(GenerateSavePath(x.Title, options.folder, "mp3")));
-            if (removeCount > 0)
-                Console.WriteLine($"{removeCount} already downloaded");
+            var posts = program.GetRedditPosts(options).ToList();
+            Console.WriteLine($"{posts.Count()} in time: {program.Stop(stopwatchGetPosts)}");
+            program.RemoveDuplicatePosts(posts, options);
             Console.WriteLine();
             Console.WriteLine($"Downloading {posts.Count} posts:");
+            program.DownloadPosts(posts, options);
+            Console.WriteLine($"Processed all current videos, time: {program.Stop(stopwatchAll)}");
+            Console.WriteLine("press any key to finish");
+            Console.ReadKey();
+        }
+
+        public virtual bool Exists(string filePath)
+        {
+            return File.Exists(filePath);
+        }
+
+        public int RemoveDuplicatePosts(List<Post> posts, Options options)
+        {
+            //see if path exists (discard if so)
+            var removeCount = posts.RemoveAll(x => Exists(GenerateSavePath(x.Title, options.folder, "mp3")));
+            if (removeCount > 0)
+                Console.WriteLine($"{removeCount} already downloaded");
+            return removeCount;
+        }
+
+        private void DownloadPosts(List<Post> posts, Options options)
+        {
             foreach (var post in posts)
             {
                 try
                 {
-                    var swProcess = Start();
+                    var stopwatchProcess = Start();
                     Console.WriteLine(post.Title);
                     Console.Write("---> ");
 
                     Console.Write("Info ");
                     var video = GetBestAudioVideo(post.Url.ToString());
                     var saveFilePath = GenerateSavePath(post.Title, options.folder, video.VideoExtension);
-                    if (!File.Exists(saveFilePath))
+                    if (!Exists(saveFilePath))
                     {
                         //Download YouTube (working), could we download multiple videos at a time?
                         Console.Write("Downloading ");
@@ -72,11 +92,11 @@ namespace r_listentothis
 
                     if (!options.video && !options.save)
                     {
-                        Console.Write("Deleteing ");
+                        Console.Write("Deleting ");
                         //Delete video
                         File.Delete(saveFilePath);
                     }
-                    Console.Write($"({Stop(swProcess)})");
+                    Console.Write($"({Stop(stopwatchProcess)})");
                     Console.WriteLine();
                 }
                 catch (Exception x)
@@ -85,12 +105,9 @@ namespace r_listentothis
                     Console.WriteLine($"WARNING: {x.Message}");
                 }
             }
-            Console.WriteLine($"Processed all current videos, time: {Stop(swAll)}");
-            Console.WriteLine("press any key to finish");
-            Console.ReadKey();
         }
 
-        private static void ValidateFolder(Options options)
+        private void ValidateFolder(Options options)
         {
             if (!Directory.Exists(options.folder))
             {
@@ -99,14 +116,14 @@ namespace r_listentothis
             }
         }
 
-        static string GenerateSavePath(string name, string folder, string extension)
+        public string GenerateSavePath(string name, string folder, string extension)
         {
             var saveFilePath = Path.Combine(folder, CleanFileName(name));
             saveFilePath = Path.ChangeExtension(saveFilePath, extension);
             return saveFilePath;
         }
 
-        private static List<Post> GetRedditPosts(Options options)
+        private List<Post> GetRedditPosts(Options options)
         {
             //reddit show top vidoes for week            
             var reddit = new Reddit(options.username, options.password);
@@ -136,9 +153,9 @@ namespace r_listentothis
             
             Console.WriteLine(progress);
             var posts = new List<Post>();
-            foreach (var l in listings)
+            foreach (var listing in listings)
             {
-                var selected = l.Take(options.count)
+                var selected = listing.Take(options.count)
                     .Where(x => (x.CommentCount >= options.commentThreshold && x.Upvotes >= options.upvoteThreshold && x.NSFW == options.NSFW) || x.Liked == true)
                     .Where(x => DownloadUrlResolver.TryNormalizeYoutubeUrl(x.Url.ToString(), out _));
 
@@ -151,7 +168,7 @@ namespace r_listentothis
             return posts;
         }
 
-        private static void ConvertToMP3(string outputFile)
+        private void ConvertToMP3(string outputFile)
         {
             var input = new MediaFile { Filename = outputFile };
             var output = new MediaFile { Filename = System.IO.Path.ChangeExtension(outputFile, "mp3") };
@@ -163,13 +180,13 @@ namespace r_listentothis
             }
         }
 
-        private static void DownloadVideo(VideoInfo video, string path)
+        private void DownloadVideo(VideoInfo video, string path)
         {            
             var videoDownloader = new VideoDownloader(video, path);
             videoDownloader.Execute();
         }
 
-        private static VideoInfo GetBestAudioVideo(string url)
+        private VideoInfo GetBestAudioVideo(string url)
         {
             IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url);
 
@@ -180,50 +197,60 @@ namespace r_listentothis
             return video;
         }
 
-        static System.Diagnostics.Stopwatch Start()
+        System.Diagnostics.Stopwatch Start()
         {
             return System.Diagnostics.Stopwatch.StartNew();
         }
 
-        static string Stop(System.Diagnostics.Stopwatch sw)
+        string Stop(System.Diagnostics.Stopwatch sw)
         {
             sw.Stop();
             return $"{(sw.ElapsedMilliseconds / 1000.0):F}s";
         }
 
-        static string CleanFileName(string name)
+        string CleanFileName(string name)
         {
             var invalids = System.IO.Path.GetInvalidFileNameChars();
             return String.Join("_", name.Split(invalids, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
         }
 
-        public static string ReadPassword()
+        public string ReadPassword()
         {
             var passbits = new Stack<string>();
             //keep reading
-            for (ConsoleKeyInfo cki = Console.ReadKey(true); cki.Key != ConsoleKey.Enter; cki = Console.ReadKey(true))
+            for (var cki = Console.ReadKey(true); cki.Key != ConsoleKey.Enter; cki = Console.ReadKey(true))
             {
                 if (cki.Key == ConsoleKey.Backspace)
                 {
-                    if (passbits.Count() > 0)
-                    {
-                        //rollback the cursor and write a space so it looks backspaced to the user
-                        Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
-                        Console.Write(" ");
-                        Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
-                        passbits.Pop();
-                    }
+                    HandleBackspace(passbits);
                 }
                 else
                 {
-                    Console.Write("*");
-                    passbits.Push(cki.KeyChar.ToString());
+                    HandleValidKeyPress(passbits, cki);
                 }
             }
             string[] pass = passbits.ToArray();
             Array.Reverse(pass);
             Console.Write(Environment.NewLine);
             return string.Join(string.Empty, pass);
+        }
+
+        private static void HandleValidKeyPress(Stack<string> passbits, ConsoleKeyInfo cki)
+        {
+            Console.Write("*");
+            passbits.Push(cki.KeyChar.ToString());
+        }
+
+        private void HandleBackspace(Stack<string> passbits)
+        {
+            if (passbits.Any())
+            {
+                //rollback the cursor and write a space so it looks backspaced to the user
+                Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                Console.Write(" ");
+                Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                passbits.Pop();
+            }
         }
     }
 }
