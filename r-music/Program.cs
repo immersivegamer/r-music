@@ -7,6 +7,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using YoutubeExtractor;
+using CommandLine;
 
 namespace r_listentothis
 {
@@ -16,11 +17,15 @@ namespace r_listentothis
         {
             Options options = new Options();
             Program program = new Program();
-            if (!CommandLine.Parser.Default.ParseArguments(args, options))
-            {
-                Console.ReadKey();
-                return;
-            }
+            int hasError = 0;
+
+            var result = CommandLine.Parser.Default.ParseArguments<Options>(args)
+                            .MapResult(
+                                opts => { options = opts; return 0; }, //in case parser sucess
+                                errs => { hasError = 1; return 0; }
+                             ); //in  case parser fail
+
+            if(hasError == 1) { return; }
 
             if(string.IsNullOrEmpty(options.password))
             {
