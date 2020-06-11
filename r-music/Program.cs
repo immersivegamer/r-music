@@ -48,8 +48,6 @@ namespace r_listentothis
             Console.WriteLine($"Downloading {posts.Count} posts:");
             program.DownloadPosts(posts, options);
             Console.WriteLine($"Processed all current videos, time: {program.Stop(stopwatchAll)}");
-            Console.WriteLine("press any key to finish");
-            Console.ReadKey();
         }
 
         public virtual bool Exists(string filePath)
@@ -186,7 +184,10 @@ namespace r_listentothis
         }
 
         private void DownloadVideo(VideoInfo video, string path)
-        {            
+        {
+            if (video.RequiresDecryption)
+                DownloadUrlResolver.DecryptDownloadUrl(video);
+
             var videoDownloader = new VideoDownloader(video, path);
             videoDownloader.Execute();
         }
@@ -195,9 +196,7 @@ namespace r_listentothis
         {
             IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url);
 
-            VideoInfo video = videoInfos
-                .OrderByDescending(info => info.AudioBitrate)
-                .First();
+            VideoInfo video = videoInfos.OrderByDescending(x => x.AudioBitrate).First();
 
             return video;
         }
